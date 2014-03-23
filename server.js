@@ -7,10 +7,11 @@ var child_process = require('child_process');
 
 var absolutize_html = require('./lib/absolutize_html').absolutize_html;
 
-var host = '0.0.0.0'
+var host = '0.0.0.0';
 var port = process.env.PORT || 8779;
 
 var wkhtmltopdf = 'wkhtmltopdf' // command to execute
+// var wkhtmltopdf = 'xvfb-run --server-args="-screen 0, 1024x768x24" wkhtmltopdf';
 var documentation = fs.readFileSync(path.join(__dirname, 'Readme.md'));
 
 function splitOptions(options) {
@@ -49,7 +50,8 @@ function handleHtmlToPdf(html, params, res) {
       var buffer = Buffer.concat(buffers);
       res.writeHead(200, {
         'Content-Type': 'application/pdf',
-        'Content-Length': buffer.length
+        'Content-Length': buffer.length,
+        'Access-Control-Allow-Origin': '*'
       });
       res.end(buffer);
     } else {
@@ -63,7 +65,8 @@ function handleHtmlToPdf(html, params, res) {
 }
 
 exports.server = http.createServer(function (req, res) {
-  u = url.parse(req.url);
+  u = url.parse(req.url, true);
+  
   if (u.pathname == '/') {
     if (req.method == 'GET') {
       res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -90,6 +93,15 @@ exports.server = http.createServer(function (req, res) {
           res.end('Form parameter "html" required');
         }
       });
+    } else if (req.method == 'GET' && u.query.hasOwnProperty('url')) {
+        var _url = u.query.url;
+        
+        var html = '';
+        
+        html = absolutize_html(html, _url);
+        //handleHtmlToPdf(html, {}, res);
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        res.end(html);
     } else {
       res.writeHead(405, {'Content-Type': 'text/plain'});
       res.end('Only POST method allowed');
